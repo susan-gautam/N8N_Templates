@@ -1,4 +1,4 @@
-# Multipage Poster Generator (Webhook) – n8n Template
+# Multipage Posting using Web Portal (Webhook): n8n Template
 
 This workflow generates or processes multiple poster pages triggered by an incoming webhook request.
 
