@@ -1,0 +1,200 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -48
+      ],
+      "id": "2ee4a1f9-8e0b-4104-8ad0-fc0bb4fddf0c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://quotes.toscrape.com/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "208d35f1-0056-4c61-9bda-e6f36c6753e3",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "quote",
+              "cssSelector": ".quote .text",
+              "returnArray": true
+            },
+            {
+              "key": "author",
+              "cssSelector": ".quote .author",
+              "returnArray": true
+            },
+            {
+              "key": "tag",
+              "cssSelector": ".quote .tag",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "cleanUpText": false
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        288,
+        -48
+      ],
+      "id": "dfec9428-ea5f-4050-aabf-988386c2bba9",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Scraping_Data_n8n",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "quote": "={{ $json.quote }}",
+            "author": "={{ $json.author }}",
+            "tags": "={{ $json.tag }}"
+          },
+          "matchingColumns": [
+            "quote"
+          ],
+          "schema": [
+            {
+              "id": "quote",
+              "displayName": "quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "author",
+              "displayName": "author",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tags",
+              "displayName": "tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "8aad88e1-474c-4bb6-9123-6b7efbf485ad",
+      "name": "Append or update row in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nlet quotesArr = $json.quote || [];\nlet authorsArr = $json.author || [];\nlet tagsArr = $json.tag || [];\n\nlet items = [];\n\nfor (let i = 0; i < quotesArr.length; i++) {\n  items.push({\n    json: {\n      quote: quotesArr[i] || \"\",\n      author: authorsArr[i] || \"\",\n      tag: tagsArr[i] || \"\"\n    }\n  });\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -48
+      ],
+      "id": "8c32a191-a378-450c-8cbd-fd13722af91f",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": false
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  }
+}
