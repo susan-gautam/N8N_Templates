@@ -1,4 +1,4 @@
-# Multipage Poster Generator – n8n Template
+# Multipage Poster Generator: n8n Template
 
 This workflow generates or processes multiple poster pages automatically using scheduled automation.
 
