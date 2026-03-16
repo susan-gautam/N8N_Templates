@@ -1,6 +1,6 @@
 # Web Scraper to Google Sheets: n8n Workflow
 
-This n8n workflow scrapes quotes, authors, and tags from a website and automatically appends or updates the data in a Google Sheet.
+This n8n workflow scrapes from simple websites (non-js heavy) and automatically appends or updates the data in a Google Sheet.
 
 ## Overview
 
