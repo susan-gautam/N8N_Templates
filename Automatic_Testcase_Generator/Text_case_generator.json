@@ -1,0 +1,141 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-800, -288],
+      "id": "manual-trigger",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-url",
+              "name": "target_url",
+              "value": "https://example.com",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-592, -352],
+      "id": "set-node",
+      "name": "Set Target URL"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pageContent = items[0].json.page_text;\nconst url = items[0].json.url;\n\nconst prompt = `Generate at least 10 functional test cases based on the following website content.\nURL: ${url}\nContent: ${pageContent}\n\nReturn JSON array with keys: URL, Test Case ID, Test Scenario, Test Steps, Expected Result, Priority.`;\n\nreturn [{ json: { prompt, url } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-16, -352],
+      "id": "prompt-node",
+      "name": "Generate Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responseText = items[0].json.response || \"[]\";\nconst testCases = JSON.parse(responseText);\n\nreturn testCases.map(tc => ({\n  json: {\n    URL: items[0].json.url,\n    \"Test Case ID\": tc[\"Test Case ID\"],\n    \"Test Scenario\": tc[\"Test Scenario\"],\n    \"Test Steps\": tc[\"Test Steps\"],\n    \"Expected\": tc[\"Expected Result\"],\n    \"Result\": \"Pending\",\n    \"Priority\": tc[\"Priority\"]\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [416, -224],
+      "id": "process-response",
+      "name": "Process AI Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const htmlString = items[0].json.data;\n\nconst cleanText = htmlString\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, \"\")\n  .replace(/<[^>]*>/g, \" \")\n  .substring(0, 4000);\n\nreturn [{ json: { url: items[0].json.url || \"Unknown\", page_text: cleanText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-208, -432],
+      "id": "extract-html",
+      "name": "Extract Page Text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.com/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{ \"prompt\": \"={{ $json.prompt }}\" }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [208, -336],
+      "id": "ai-api",
+      "name": "AI API Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browser-service/content",
+        "sendBody": true,
+        "jsonBody": "{ \"url\": \"{{ $json.target_url }}\" }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-416, -432],
+      "id": "scraper",
+      "name": "Fetch Website Content"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "REPLACE_WITH_SHEET_ID",
+        "sheetName": "Sheet1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Test Case ID": "={{ $json['Test Case ID'] }}",
+            "Test Scenario": "={{ $json['Test Scenario'] }}",
+            "Test Steps": "={{ $json['Test Steps'] }}",
+            "Expected Result": "={{ $json.Expected }}",
+            "Priority": "={{ $json.Priority }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [688, -224],
+      "id": "google-sheets",
+      "name": "Save to Google Sheets"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [[{ "node": "Set Target URL", "type": "main", "index": 0 }]]
+    },
+    "Set Target URL": {
+      "main": [[{ "node": "Fetch Website Content", "type": "main", "index": 0 }]]
+    },
+    "Fetch Website Content": {
+      "main": [[{ "node": "Extract Page Text", "type": "main", "index": 0 }]]
+    },
+    "Extract Page Text": {
+      "main": [[{ "node": "Generate Prompt", "type": "main", "index": 0 }]]
+    },
+    "Generate Prompt": {
+      "main": [[{ "node": "AI API Request", "type": "main", "index": 0 }]]
+    },
+    "AI API Request": {
+      "main": [[{ "node": "Process AI Response", "type": "main", "index": 0 }]]
+    },
+    "Process AI Response": {
+      "main": [[{ "node": "Save to Google Sheets", "type": "main", "index": 0 }]]
+    }
+  }
+}
