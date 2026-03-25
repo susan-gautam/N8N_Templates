@@ -1,0 +1,142 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-384, -208],
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "username",
+              "value": "YOUR_USERNAME",
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "value": "YOUR_PASSWORD",
+              "type": "string"
+            },
+            {
+              "name": "login_url",
+              "value": "https://example.com/login",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-176, -256],
+      "name": "Set Login Details"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"code\": \"BROWSER AUTOMATION SCRIPT HERE\" }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [64, -368],
+      "name": "Scraper API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $json.data;\nconst url = $json.url || \"Unknown URL\";\n\nconst interactiveElements = html.match(/<(button|input|select|textarea|a|form)[^>]*>([\\s\\S]*?)<\\/\\1>/gi) || [];\n\nconst cleanedContent = interactiveElements.join('\\n').substring(0, 8000);\n\nreturn {\n  cleaned_html: cleanedContent,\n  target_url: url\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, -336],
+      "name": "Extract HTML Elements"
+    },
+    {
+      "parameters": {
+        "jsCode": "const htmlSnippet = $json.cleaned_html;\nconst pageUrl = $json.target_url;\n\nconst prompt = `Generate Page Object Model locators in JSON format for Selenium based on the following HTML:\\n${htmlSnippet}`;\n\nreturn {\n  prompt: prompt,\n  target_url: pageUrl\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [512, -336],
+      "name": "Generate Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-api-endpoint.com/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "{ \"prompt\": \"={{ $json.prompt }}\" }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [720, -240],
+      "name": "AI API Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $json.response || \"[]\";\nconst pomData = JSON.parse(rawText);\n\nconst finalArray = Array.isArray(pomData) ? pomData : [pomData];\n\nreturn finalArray.map(item => {\n  return {\n    \"Element Name\": item[\"Element Name\"],\n    \"Locator Type\": item[\"Locator Type\"],\n    \"Locator Value\": item[\"Locator Value\"],\n    \"Description\": item[\"Description\"]\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [944, -224],
+      "name": "Process AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "POM",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Element Name": "={{ $json['Element Name'] }}",
+            "Locator Value": "={{ $json['Locator Value'] }}",
+            "Description": "={{ $json.Description }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1152, -128],
+      "name": "Save to Google Sheets"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [[{ "node": "Set Login Details", "type": "main", "index": 0 }]]
+    },
+    "Set Login Details": {
+      "main": [[{ "node": "Scraper API", "type": "main", "index": 0 }]]
+    },
+    "Scraper API": {
+      "main": [[{ "node": "Extract HTML Elements", "type": "main", "index": 0 }]]
+    },
+    "Extract HTML Elements": {
+      "main": [[{ "node": "Generate Prompt", "type": "main", "index": 0 }]]
+    },
+    "Generate Prompt": {
+      "main": [[{ "node": "AI API Request", "type": "main", "index": 0 }]]
+    },
+    "AI API Request": {
+      "main": [[{ "node": "Process AI Response", "type": "main", "index": 0 }]]
+    },
+    "Process AI Response": {
+      "main": [[{ "node": "Save to Google Sheets", "type": "main", "index": 0 }]]
+    }
+  }
+}
