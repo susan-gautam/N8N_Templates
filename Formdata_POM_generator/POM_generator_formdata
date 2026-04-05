@@ -1,0 +1,117 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-464, 144],
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "name": "username", "value": "YOUR_USERNAME", "type": "string" },
+            { "name": "password", "value": "YOUR_PASSWORD", "type": "string" },
+            { "name": "login_url", "value": "YOUR_LOGIN_URL", "type": "string" }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [-256, 32],
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"code\": \"BROWSERLESS_SCRIPT_HERE\" }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [0, 0],
+      "name": "Scraper API"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* Extract interactive HTML elements */"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 32],
+      "name": "extract all html"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* Generate POM prompt for Gemini */"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [464, 64],
+      "name": "prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini:generateContent?key=YOUR_API_KEY",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [688, 80],
+      "name": "Gemini Node"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* Parse Gemini JSON response */"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [912, 96],
+      "name": "Extract Gemini Response"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Form_Data"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1120, 128],
+      "name": "Append or update row in sheet"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [[{ "node": "Edit Fields", "type": "main", "index": 0 }]]
+    },
+    "Edit Fields": {
+      "main": [[{ "node": "Scraper API", "type": "main", "index": 0 }]]
+    },
+    "Scraper API": {
+      "main": [[{ "node": "extract all html", "type": "main", "index": 0 }]]
+    },
+    "extract all html": {
+      "main": [[{ "node": "prompt", "type": "main", "index": 0 }]]
+    },
+    "prompt": {
+      "main": [[{ "node": "Gemini Node", "type": "main", "index": 0 }]]
+    },
+    "Gemini Node": {
+      "main": [[{ "node": "Extract Gemini Response", "type": "main", "index": 0 }]]
+    },
+    "Extract Gemini Response": {
+      "main": [[{ "node": "Append or update row in sheet", "type": "main", "index": 0 }]]
+    }
+  }
+}
